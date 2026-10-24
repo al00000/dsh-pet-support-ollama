@@ -52,6 +52,7 @@ export const PET_DISPLAY_SET: ReadonlySet<string> = new Set(PET_DISPLAYS);
  *  host 不能 import src/shared（见文件头注释的 DSH 单文件加载约束），这里是那份清单的自包含副本，
  *  所以加/删字体预设时两边都要改。 */
 const FONT_FAMILY_SET: ReadonlySet<string> = new Set([
+  'jetbrains-mono',
   'candy',
   'yahei',
   'youyuan',

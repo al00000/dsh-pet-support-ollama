@@ -14,9 +14,14 @@ export interface AiRequest {
 export type AiTransportEvent = { text?: string; refusal?: boolean };
 const quiet = { debug() {}, info() {}, warn() {}, error() {} };
 
+function openAiBaseUrl(settings: Readonly<StandaloneAiSettings>): string {
+  const base = settings.baseUrl.replace(/\/+$/, '');
+  return settings.protocol === 'ollama' && !/\/v1$/i.test(base) ? base + '/v1' : base;
+}
+
 /** SDKs can inherit custom auth headers from env even with explicit keys; rebuild headers. */
 export function isolatedFetch(settings: Readonly<StandaloneAiSettings>, fetcher: AiFetch): AiFetch {
-  const base = settings.baseUrl.replace(/\/+$/, '');
+  const base = settings.protocol === 'anthropic' ? settings.baseUrl.replace(/\/+$/, '') : openAiBaseUrl(settings);
   const expected = base + (settings.protocol === 'anthropic' ? '/v1/messages' : '/chat/completions');
   return async (url, init) => {
     const beta =
@@ -25,7 +30,7 @@ export function isolatedFetch(settings: Readonly<StandaloneAiSettings>, fetcher:
       settings.model === 'claude-opus-5-5';
     const urlStr = String(url);
     const validOpenAi =
-      settings.protocol === 'openai-compatible' &&
+      settings.protocol !== 'anthropic' &&
       (urlStr === expected || urlStr === base + '/chat/completions' || urlStr === base + '/v1/chat/completions');
     const validAnthropic =
       settings.protocol === 'anthropic' &&
@@ -40,7 +45,9 @@ export function isolatedFetch(settings: Readonly<StandaloneAiSettings>, fetcher:
       if (new URL(base).origin === 'https://api.anthropic.com' && settings.model === 'claude-opus-5-5') {
         headers.set('anthropic-beta', 'server-side-fallback-2026-07-01');
       }
-    } else headers.set('authorization', `Bearer ${settings.apiKey}`);
+    } else {
+      headers.set('authorization', `Bearer ${settings.protocol === 'ollama' ? 'ollama' : settings.apiKey}`);
+    }
     return fetcher(url, { method: 'POST', body: init?.body, headers, signal: init?.signal, redirect: 'error' });
   };
 }
@@ -52,22 +59,29 @@ export async function* sdkTextStream(
   fetcher: AiFetch,
 ): AsyncIterable<AiTransportEvent> {
   const shared = {
-    apiKey: settings.apiKey,
-    baseURL: settings.baseUrl.replace(/\/+$/, ''),
+    apiKey: settings.protocol === 'ollama' ? 'ollama' : settings.apiKey,
+    baseURL: settings.protocol === 'anthropic' ? settings.baseUrl.replace(/\/+$/, '') : openAiBaseUrl(settings),
     maxRetries: 0,
     timeout: settings.timeoutMs,
     fetch: isolatedFetch(settings, fetcher),
     logger: quiet,
     logLevel: 'off' as const,
   };
-  if (settings.protocol === 'openai-compatible') {
+  if (settings.protocol !== 'anthropic') {
     const client = new OpenAI({ ...shared, organization: null, project: null, webhookSecret: null });
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       ...(request.system ? [{ role: 'system' as const, content: request.system }] : []),
       ...request.messages,
     ];
     const stream = await client.chat.completions.create(
-      { model: settings.model, messages, stream: true, max_tokens: settings.maxTokens, n: 1 },
+      {
+        model: settings.model,
+        messages,
+        stream: true,
+        max_tokens: settings.maxTokens,
+        n: 1,
+        ...(settings.protocol === 'ollama' ? { reasoning_effort: 'none' } : {}),
+      },
       { signal },
     );
     for await (const event of stream) {

@@ -49,6 +49,7 @@ describe('flattenConfigPets —— 成品 → 渲染列表的唯一填充点', (
         userFile: join(dir, 'main-config.jsonc'), // 不存在：只测内置默认
         petDir: join(dir, 'pet'), // 不存在：不掺文件宠物
       });
+      assert.equal((merged.main.font as Record<string, unknown>).family, 'jetbrains-mono');
       const pets = flattenConfigPets(merged);
       assert.ok(pets.length > 0, '内置默认配置应至少有一只宠物');
       for (const p of pets) {

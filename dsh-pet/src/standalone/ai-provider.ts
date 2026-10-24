@@ -11,6 +11,9 @@ const MAX_OUTPUT_CHARS = 16_384;
 const MAX_EVENTS = 4096;
 const REQUESTS_PER_MINUTE = 6;
 const RATE_WINDOW_MS = 60_000;
+const OLLAMA_REQUEST_TIMEOUT_MS = 300_000;
+const OLLAMA_TEST_TIMEOUT_MS = 120_000;
+const DEFAULT_TEST_TIMEOUT_MS = 15_000;
 const textBlock = z.object({ type: z.literal('text'), text: z.string().max(MAX_INPUT_CHARS) });
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -124,13 +127,15 @@ export function createStandaloneAi(
     store.current().enabled &&
     !!store.current().model &&
     !!store.current().baseUrl &&
-    !!store.current().apiKey;
+    (store.current().protocol === 'ollama' || !!store.current().apiKey);
   const selection = () => ({ provider: PROVIDER, model: ready() ? store.current().model : '' });
 
   async function* stream(options: unknown): AsyncIterable<{ type: 'text'; text: string }> {
     if (!ready()) throw new Error('Standalone AI is not ready. Configure and enable the model first.');
     const settings = store.current();
     const { request, signal: callerSignal } = parseRequest(options, settings.model);
+    const requestTimeoutMs =
+      settings.protocol === 'ollama' ? Math.max(settings.timeoutMs, OLLAMA_REQUEST_TIMEOUT_MS) : settings.timeoutMs;
     if (callerSignal?.aborted) throw new Error('Standalone AI request cancelled.');
     if (active) throw new Error('Standalone AI is busy. Please wait.');
     const recent = requests.filter((time) => now() - time < RATE_WINDOW_MS);
@@ -140,8 +145,10 @@ export function createStandaloneAi(
     active = controller;
     const abort = () => controller.abort();
     callerSignal?.addEventListener('abort', abort, { once: true });
-    const timer = setTimeout(abort, settings.timeoutMs);
-    const iterator = sdkTextStream(settings, request, controller.signal, fetcher)[Symbol.asyncIterator]();
+    const timer = setTimeout(abort, requestTimeoutMs);
+    const requestSettings =
+      requestTimeoutMs === settings.timeoutMs ? settings : { ...settings, timeoutMs: requestTimeoutMs };
+    const iterator = sdkTextStream(requestSettings, request, controller.signal, fetcher)[Symbol.asyncIterator]();
     let emitted = 0;
     let events = 0;
     try {
@@ -225,7 +232,10 @@ export function createStandaloneAi(
     async testConnection(input: { protocol?: string; baseUrl?: string; model?: string; apiKey?: string }) {
       if (disposed) return { ok: false, message: '服务已关闭' };
       const current = store.current();
-      const protocol = input.protocol === 'anthropic' ? 'anthropic' : (input.protocol ?? current.protocol);
+      const protocol =
+        input.protocol === 'anthropic' || input.protocol === 'ollama' || input.protocol === 'openai-compatible'
+          ? input.protocol
+          : current.protocol;
       const baseUrl = (input.baseUrl !== undefined ? input.baseUrl : current.baseUrl).trim();
       const model = (input.model !== undefined ? input.model : current.model).trim();
       const apiKey = (input.apiKey !== undefined && input.apiKey !== '' ? input.apiKey : current.apiKey).trim();
@@ -236,12 +246,13 @@ export function createStandaloneAi(
       if (!model) {
         return { ok: false, message: '请先填写模型名称' };
       }
-      if (!apiKey) {
+      if (!apiKey && protocol !== 'ollama') {
         return { ok: false, message: '请先填写 API 密钥' };
       }
 
+      const testTimeoutMs = protocol === 'ollama' ? OLLAMA_TEST_TIMEOUT_MS : DEFAULT_TEST_TIMEOUT_MS;
       const testSettings = {
-        protocol: protocol as 'openai-compatible' | 'anthropic',
+        protocol,
         baseUrl,
         model,
         apiKey,
@@ -249,11 +260,11 @@ export function createStandaloneAi(
         automaticWhispers: false,
         whisperIntervalSec: 300,
         maxTokens: 32,
-        timeoutMs: 15_000,
+        timeoutMs: testTimeoutMs,
       };
 
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15_000);
+      const timer = setTimeout(() => controller.abort(), testTimeoutMs);
       try {
         const testStream = sdkTextStream(
           testSettings,
@@ -277,7 +288,9 @@ export function createStandaloneAi(
         return { ok: true, message: '连接成功！模型响应正常。', reply: reply.trim() };
       } catch (error) {
         if (controller.signal.aborted) {
-          return { ok: false, message: '连接超时（15 秒未响应）：请检查网络连通性或服务器状态' };
+          return protocol === 'ollama'
+            ? { ok: false, message: '连接超时（120 秒未响应）：请检查 Ollama 服务状态、模型名称或显存是否足够' }
+            : { ok: false, message: '连接超时（15 秒未响应）：请检查网络连通性或服务器状态' };
         }
         if (isAuthenticationFailure(error)) {
           return { ok: false, message: '身份验证失败 (HTTP 401/403)：请检查 API 密钥是否正确' };
@@ -287,7 +300,9 @@ export function createStandaloneAi(
         }
         const rawMsg = error instanceof Error ? error.message : String(error);
         if (rawMsg.includes('404')) {
-          return { ok: false, message: '接口路径或模型不存在 (HTTP 404)：请检查接口地址（通常以 /v1 结尾）与模型名称' };
+          return protocol === 'ollama'
+            ? { ok: false, message: 'Ollama 返回 HTTP 404：请确认模型已下载，并检查 Ollama 服务地址与模型名称' }
+            : { ok: false, message: '接口路径或模型不存在 (HTTP 404)：请检查接口地址（通常以 /v1 结尾）与模型名称' };
         }
         if (rawMsg.includes('ECONNREFUSED') || rawMsg.includes('fetch failed')) {
           return { ok: false, message: '无法连接到目标服务器：请检查地址与端口是否正确、服务器是否正在运行' };

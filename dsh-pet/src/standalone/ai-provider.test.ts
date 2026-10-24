@@ -84,6 +84,7 @@ test('official OpenAI SDK extracts fragmented text once, maps text history and p
     assert.equal(request?.redirect, 'error');
     const body = JSON.parse(String(request?.body));
     assert.equal(body.max_tokens, 1024);
+    assert.equal(body.reasoning_effort, undefined);
     assert.deepEqual(body.messages, [
       { role: 'system', content: 'system' },
       { role: 'user', content: 'hello' },
@@ -255,6 +256,28 @@ test('wall-clock timeout also bounds a transport ignoring cancellation', async (
   );
 });
 
+test('Ollama chat allows large models time to load beyond the normal request timeout', async () => {
+  await fixture(
+    async (ai) => {
+      await ai.saveSettings({
+        protocol: 'ollama',
+        baseUrl: 'http://localhost:11434',
+        model: 'test-model',
+        apiKey: '',
+        enabled: true,
+        timeoutMs: 1000,
+      });
+      assert.equal(await collect(ai.stream(options)), 'ready');
+    },
+    async (_url, init) => {
+      assert.equal(JSON.parse(String(init?.body)).reasoning_effort, 'none');
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      return openAiResponse('ready');
+    },
+    'ollama',
+  );
+});
+
 test('Anthropic protocol uses explicit key, adaptive Opus without sampling, ignores thinking and refuses cleanly', async () => {
   for (const refused of [false, true]) {
     await fixture(
@@ -324,6 +347,35 @@ test('testConnection checks parameters and reports success or friendly error', a
       assert.deepEqual(await ai.testConnection({ baseUrl: '', model: 'm', apiKey: 'k' }), {
         ok: false,
         message: '请先填写接口地址（Base URL）',
+      });
+
+      test('Ollama uses the OpenAI-compatible endpoint, appending /v1 and requiring no API key', async () => {
+        await fixture(
+          async (ai) => {
+            await ai.saveSettings({
+              protocol: 'ollama',
+              baseUrl: 'http://localhost:11434',
+              model: 'llama3.2',
+              apiKey: '',
+              enabled: true,
+            });
+            assert.equal(ai.isReady(), true);
+            const result = await ai.testConnection({
+              protocol: 'ollama',
+              baseUrl: 'http://localhost:11434',
+              model: 'llama3.2',
+            });
+            assert.equal(result.ok, true);
+            assert.equal(result.reply, 'ok');
+          },
+          async (url, init) => {
+            assert.equal(String(url), 'http://localhost:11434/v1/chat/completions');
+            assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer ollama');
+            assert.equal(JSON.parse(String(init?.body)).model, 'llama3.2');
+            return openAiResponse('ok');
+          },
+          'ollama',
+        );
       });
       assert.deepEqual(await ai.testConnection({ baseUrl: 'https://example.test/v1', model: '', apiKey: 'k' }), {
         ok: false,

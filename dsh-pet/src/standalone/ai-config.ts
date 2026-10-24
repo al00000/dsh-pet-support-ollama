@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { readAiSettings, writeAiSettings } from './ai-storage';
 
 export interface StandaloneAiPublicSettings {
-  protocol: 'openai-compatible' | 'anthropic';
+  protocol: 'openai-compatible' | 'anthropic' | 'ollama';
   baseUrl: string;
   model: string;
   enabled: boolean;
@@ -49,7 +49,7 @@ function containsControlChar(s: string): boolean {
 }
 
 const fields = {
-  protocol: z.enum(['openai-compatible', 'anthropic']),
+  protocol: z.enum(['openai-compatible', 'anthropic', 'ollama']),
   baseUrl: z.string().max(2048).refine(safeEndpoint),
   model: z
     .string()
@@ -76,7 +76,9 @@ export function validateSettings(input: unknown, previous: Readonly<StandaloneAi
     const { clearApiKey, ...values } = patch;
     const apiKey = clearApiKey ? '' : values.apiKey || previous.apiKey;
     const next = persistedSchema.parse({ ...previous, ...values, apiKey });
-    if (next.enabled && (!next.model || !next.baseUrl || !next.apiKey)) throw new Error('Incomplete settings');
+    if (next.enabled && (!next.model || !next.baseUrl || (next.protocol !== 'ollama' && !next.apiKey))) {
+      throw new Error('Incomplete settings');
+    }
     return next;
   } catch {
     throw new Error('Invalid standalone AI settings.');

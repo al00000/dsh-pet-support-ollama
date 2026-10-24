@@ -40,6 +40,7 @@ import type { jsx } from 'react/jsx-runtime';
  * 断词用 break-word 而非 anywhere：只在整词放不下时才断，不会把 85% / ¥12.34 这类数字拆到两行。 */
 const bubbleCss = [
   // 本地字体：/dsh-pet-7340/font/ 由 host 从 assets/fonts 提供；font-display swap 先回退后切换
+  '@font-face{font-family:"JetBrainsMono";src:url("/dsh-pet-7340/font/JetBrainsMono-Regular.ttf") format("truetype");font-display:swap;font-weight:400}',
   '@font-face{font-family:"ShangshouSoftCandy";src:url("/dsh-pet-7340/font/上首软糖体.ttf") format("truetype");font-display:swap;font-weight:400}',
   '.dsh-pet-bubble{position:absolute;left:50%;transform:translateX(-50%);' +
     'bottom:calc(100% - var(--dsh-pet-size)*0.108);' +
@@ -51,7 +52,7 @@ const bubbleCss = [
     'border-radius:calc(var(--f)*0.7692);' +
     'background:rgba(255,255,255,.92);' +
     '--f0:var(--dsh-pet-font-bubble,calc(var(--dsh-pet-size)*0.0455));--f:var(--f0);' +
-    'color:#2b2b2b;font-family:var(--dsh-pet-font-family,"ShangshouSoftCandy","Yuanti SC","YouYuan","幼圆","Comic Sans MS","PingFang SC","Microsoft YaHei",sans-serif);' +
+    'color:#2b2b2b;font-family:var(--dsh-pet-font-family,"JetBrainsMono","Microsoft YaHei UI","Microsoft YaHei","SimHei","DengXian","SimSun",sans-serif);' +
     'font-size:var(--f);line-height:1.6;z-index:3;pointer-events:none;' +
     'box-shadow:0 calc(var(--f)*0.1978) calc(var(--f)*0.7692) rgba(0,0,0,.14),0 1px 3px rgba(0,0,0,.08);' +
     'backdrop-filter:blur(6px);opacity:0;transition:opacity .25s ease;' +

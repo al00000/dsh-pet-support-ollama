@@ -727,6 +727,13 @@ describe('saveUserConfig —— 物理参数 physics（白名单 + 透传保留�
   });
 });
 
+describe('saveUserConfig —— JetBrains Mono 字体预设', () => {
+  test('JetBrains Mono 是可保存的字体种类', () => {
+    const font = { family: 'jetbrains-mono', size: 21, followPet: true };
+    assert.deepEqual(saveOnce({ pets: PETS, font })?.font, font);
+  });
+});
+
 describe('saveUserConfig —— 碎碎念 / 对话模型（白名单 + 透传保留）', () => {
   const WM = { provider: 'deepseek', model: 'deepseek-chat' };
   const CM = { provider: 'opencode', model: 'big-model' };

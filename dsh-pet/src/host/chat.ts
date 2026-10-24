@@ -45,8 +45,8 @@ export interface ChatMemoryMessage {
   ts: number;
 }
 
-/** 单次生成超时（ms）：对话等 LLM 回复，60s 足够 */
-const TIMEOUT_MS = 60_000;
+/** 单次生成超时（ms）：本机大模型首次加载可能需要数分钟 */
+const TIMEOUT_MS = 300_000;
 
 /** 配图指令：附在 user 正文之后（紧邻回答位置，模型更容易遵守） */
 function imageInstruction(pool: MemeEntry[]): string {

@@ -15,6 +15,7 @@ test('settings validation accepts explicit costs and write-only blank/clear key 
     maxTokens: 512,
   };
   assert.deepEqual(validateSettings(input), input);
+  assert.deepEqual(validateSettings({ protocol: 'ollama' }), { protocol: 'ollama' });
   assert.deepEqual(validateSettings({ clearApiKey: true }), { clearApiKey: true });
   for (const input of [
     null,
@@ -50,12 +51,13 @@ test('settings shell is accessible, self contained, and never saves browser secr
   assert.match(settingsPage, /type="password"/);
   assert.match(settingsPage, /aria-live="polite"/);
   assert.match(settingsPage, /automaticWhispers/);
+  assert.match(settingsPage, /option value="ollama"/);
   assert.match(settingsPage, /费用/);
   assert.match(settingsPage, /min="60"/);
   assert.match(settingsScript, /history\.replaceState/);
   assert.match(settingsScript, /X-DSH-Pet-Token/);
   assert.doesNotMatch(settingsScript, /localStorage|sessionStorage|document\.cookie|innerHTML/);
-  assert.doesNotMatch(settingsPage, /https?:\/\/(?!example)/);
+  assert.doesNotMatch(settingsPage, /https?:\/\/(?!example|localhost:11434)/);
   assert.match(settingsStyle, /focus-visible/);
 });
 
@@ -121,6 +123,10 @@ test('settings browser script strips fragment, keeps key write-only and explicit
   assert.equal(stripped, '/standalone-ai/');
   assert.equal(element('apiKey').value, '');
   assert.equal(element('key-state').textContent, '已保存 · 不回显');
+  element('protocol').value = 'ollama';
+  element('protocol').listeners.change();
+  assert.equal(element('apiKey').disabled, true);
+  assert.match(element('key-note').textContent, /无需 API 密钥/);
   element('apiKey').value = 'write-only-fake-key';
   await element('settings').listeners.submit({ preventDefault() {} });
   assert.equal(element('apiKey').value, '');

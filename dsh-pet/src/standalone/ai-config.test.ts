@@ -52,6 +52,27 @@ test('validates safe endpoints and explicit configuration with fixed redacted er
   }
 });
 
+test('accepts enabled Ollama settings without an API key', () => {
+  const settings = validateSettings(
+    {
+      protocol: 'ollama',
+      baseUrl: 'http://localhost:11434',
+      model: 'llama3.2',
+      apiKey: '',
+      enabled: true,
+    },
+    DEFAULT_AI_SETTINGS,
+  );
+
+  assert.equal(settings.protocol, 'ollama');
+  assert.equal(settings.apiKey, '');
+  assert.equal(settings.enabled, true);
+  assert.throws(
+    () => validateSettings({ ...configured, apiKey: '' }, DEFAULT_AI_SETTINGS),
+    /Invalid standalone AI settings/,
+  );
+});
+
 test('persists only in isolated home, redacts keys, supports keep and clear, reloads offline', async () => {
   const home = mkdtempSync(join(tmpdir(), 'pet-ai-'));
   try {

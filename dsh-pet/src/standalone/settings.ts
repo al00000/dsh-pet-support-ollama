@@ -26,7 +26,7 @@ const endpoint = z
   }, '接口地址必须是 HTTP(S) 地址，且不能含账号、查询参数或片段');
 const settingsSchema = z
   .object({
-    protocol: z.enum(['openai-compatible', 'anthropic']).optional(),
+    protocol: z.enum(['openai-compatible', 'anthropic', 'ollama']).optional(),
     baseUrl: endpoint.optional(),
     model: z.string().max(200).optional(),
     apiKey: z.string().max(8192).optional(),

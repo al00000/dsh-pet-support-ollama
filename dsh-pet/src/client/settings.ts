@@ -316,13 +316,14 @@ export const zh = {
     '字体种类作用于现在用软糖体的全部文字：宠物气泡、悬浮提示、对话窗、得分弹窗；字号只作用于宠物气泡与悬浮提示（对话窗与得分弹窗的字号不变）。全局默认，所有宠物共用（pet pack 可在自己种类文件里单独覆盖）；随「保存」写入用户配置，浏览器保存后即时生效，桌面端由保存重载宠物窗口后生效。',
   fontFamilyLabel: '字体',
   fontFamilyHint:
-    '「软糖体（内置）」随插件提供；其余为系统字体，机器上没装时自动回退到字体栈里的下一个（不会空白或报错）。',
+    '「JetBrains Mono」和「软糖体」随插件提供；JetBrains Mono 不含中文字形，中文会回退到本机系统字体。其余为系统字体，缺失时自动继续回退。',
   fontSizeLabel: '字号（px）',
   fontSizeHint: '气泡正文字号；悬浮提示与气泡内的小字按既有比例派生。范围 4~200。',
   fontFollowToggle: '字号随宠物大小缩放',
   fontFollowToggleHint:
     '开启（默认）：宠物调大时字号等比放大，462 宽时正好是上面设定的字号；关闭：字号恒定，不随宠物大小变化。',
   invalidFont: '请检查字体设置：字体需在下拉列表内，字号需为 4~200 的数字。',
+  'font.jetbrains-mono': 'JetBrains Mono（内置，中文回退系统字体）',
   'font.candy': '软糖体（内置）',
   'font.yahei': '微软雅黑 / 苹方',
   'font.youyuan': '幼圆',
@@ -509,7 +510,7 @@ export const en = {
     'The family applies to every place that currently uses the candy font: pet bubble, hover tooltip, chat popup, score popup. The size applies only to the pet bubble and the hover tooltip (chat and score popups keep their own size). Global default, shared by every pet (a pet pack may override it in its own kind file); written to the user config on "Save" — instant in the browser, and on the desktop it applies once Save reloads the pet windows.',
   fontFamilyLabel: 'Font',
   fontFamilyHint:
-    '"Candy (bundled)" ships with the plugin; the others are system fonts. If a font is missing on this machine, it falls back to the next one in the stack (never blank, never an error).',
+    'JetBrains Mono and Candy ship with the plugin. JetBrains Mono has no CJK glyphs, so Chinese falls back to system fonts; missing system fonts fall through to the next option.',
   fontSizeLabel: 'Font size (px)',
   fontSizeHint:
     'Bubble body text size; the tooltip and the smaller lines inside the bubble scale proportionally. Range 4–200.',
@@ -518,6 +519,7 @@ export const en = {
     'On (default): the font grows with the pet — at 462 px width it is exactly the size above. Off: the size stays fixed regardless of pet size.',
   invalidFont:
     'Check the font settings: the family must be in the list and the size must be a number between 4 and 200.',
+  'font.jetbrains-mono': 'JetBrains Mono (bundled; CJK falls back to system fonts)',
   'font.candy': 'Candy (bundled)',
   'font.yahei': 'Microsoft YaHei / PingFang',
   'font.youyuan': 'YouYuan',

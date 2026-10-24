@@ -15,17 +15,27 @@ export interface FontPreset {
 }
 
 /** 字体预设清单：顺序 = 设置页下拉框的显示顺序（第一项是默认）。
- *  candy 是唯一随包发布的字体（assets/fonts/上首软糖体.ttf），两端各自注入 @font-face 后即可用；
- *  它的 CSS 名 "ShangshouSoftCandy" 是**我们自己起的**（与字体文件内部名称无关），改名要同步
+ *  candy 与 JetBrains Mono 随包发布（assets/fonts/），两端各自注入 @font-face 后即可用；
+ *  CSS 名 "ShangshouSoftCandy" 是**我们自己起的**（与字体文件内部名称无关），改名要同步
  *  浏览器端 bubble.ts 与桌面端 renderer.js 的 @font-face 声明。
+ *  JetBrains Mono 不含中文字符，中文字形由后续系统字体回退提供；
  *  其余都是系统字体：机器上没装时由后面的兜底自然回退，不报错也不空白。 */
 export const FONT_PRESETS: FontPreset[] = [
+  {
+    id: 'jetbrains-mono',
+    stack:
+      '"JetBrainsMono","Microsoft YaHei UI","Microsoft YaHei","SimHei","DengXian","SimSun","Noto Sans CJK SC","PingFang SC",sans-serif',
+  },
+  {
+    id: 'yahei',
+    stack:
+      '"Microsoft YaHei UI","Microsoft YaHei","SimHei","DengXian","SimSun","Noto Sans CJK SC","PingFang SC",sans-serif',
+  },
   {
     id: 'candy',
     stack:
       '"ShangshouSoftCandy","Yuanti SC","YouYuan","幼圆","Comic Sans MS","PingFang SC","Microsoft YaHei",sans-serif',
   },
-  { id: 'yahei', stack: '"Microsoft YaHei","PingFang SC",sans-serif' },
   { id: 'youyuan', stack: '"YouYuan","Yuanti SC",sans-serif' },
   { id: 'kaiti', stack: '"KaiTi","STKaiti",serif' },
   { id: 'simsun', stack: '"SimSun","Songti SC",serif' },
@@ -39,10 +49,9 @@ export const FONT_SIZE_MIN = 4;
 export const FONT_SIZE_MAX = 200;
 
 /** font 段默认值：与内置 assets/config.jsonc 的 font 段一致。
- *  刻意等于「接入本配置之前的行为」——462 宽宠物气泡 21px、且随宠物大小缩放，
- *  所以不含 font 字段的旧配置，渲染结果与改造前一致。 */
+ *  JetBrains Mono 用于拉丁字符，中文由本机系统字体补齐；462 宽宠物气泡 21px、且随宠物大小缩放。 */
 export const DEFAULT_FONT: FontConfig = {
-  family: 'candy',
+  family: 'jetbrains-mono',
   size: 21,
   followPet: true,
 };

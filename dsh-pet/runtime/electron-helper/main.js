@@ -589,20 +589,22 @@ let bridgeSeq = 0;
 /** id -> {resolve, reject}：一个请求对应宿主的一次回调应答 */
 const bridgePending = new Map();
 let bridgeCallbackUrl = '';
+const BRIDGE_DEFAULT_TIMEOUT_MS = 45_000;
+const BRIDGE_CHAT_TIMEOUT_MS = 360_000;
 
 /** 渲染端请求 → 宿主（请求行带回调 URL）；返回宿主应答（{status, contentType?, body?, file?}），超时抛错 */
-function bridgeRequest(method, url, body) {
+function bridgeRequest(method, url, body, timeoutMs = BRIDGE_DEFAULT_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     const id = ++bridgeSeq;
-    bridgePending.set(id, { resolve, reject });
-    process.stdout.write(BRIDGE_PREFIX + JSON.stringify({ id, method, url, body, cb: bridgeCallbackUrl }) + '\n');
-    // 宿主若长期不应答（进程退出/宿主动作挂起）不无限挂起：45s 兜底（LLM 生成最长 30-60s）
-    setTimeout(() => {
-      const p = bridgePending.get(id);
-      if (!p) return;
+    const timer = setTimeout(() => {
+      const pending = bridgePending.get(id);
+      if (!pending) return;
       bridgePending.delete(id);
-      p.reject(new Error('bridge request timeout'));
-    }, 45000).unref?.();
+      pending.reject(new Error('bridge request timeout'));
+    }, timeoutMs);
+    bridgePending.set(id, { resolve, reject, timer });
+    process.stdout.write(BRIDGE_PREFIX + JSON.stringify({ id, method, url, body, cb: bridgeCallbackUrl }) + '\n');
+    timer.unref?.();
   });
 }
 
@@ -611,6 +613,7 @@ function bridgeResolve(resp) {
   const p = resp && bridgePending.get(resp.id);
   if (!p) return;
   bridgePending.delete(resp.id);
+  clearTimeout(p.timer);
   p.resolve(resp);
 }
 
@@ -659,7 +662,9 @@ async function handleBridgeRequest(request) {
   if (method === 'POST' || method === 'PUT') {
     body = await request.text();
   }
-  const resp = await bridgeRequest(method, url.pathname + url.search, body);
+  const timeoutMs =
+    method === 'POST' && url.pathname.endsWith('/chat') ? BRIDGE_CHAT_TIMEOUT_MS : BRIDGE_DEFAULT_TIMEOUT_MS;
+  const resp = await bridgeRequest(method, url.pathname + url.search, body, timeoutMs);
   const headers = { 'access-control-allow-origin': '*' }; // 渲染端页面是 file:// 源，scheme 跨源需 CORS
   if (resp.contentType) headers['content-type'] = resp.contentType;
   if (resp.file) {

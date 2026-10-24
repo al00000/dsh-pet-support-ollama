@@ -7,8 +7,8 @@ export const settingsPage = `<!doctype html>
 <h1>桌宠 AI 设置</h1><p class="intro">配置你的大模型 API 接口，开启桌面聊天与碎碎念。<br>所有设置仅保存在本机，支持即时测试连接。</p></header>
 <form id="settings" aria-describedby="privacy">
 <fieldset><legend>模型连接</legend>
-<label for="protocol">接口协议</label><select id="protocol" name="protocol"><option value="openai-compatible">OpenAI 兼容</option><option value="anthropic">Anthropic</option></select>
-<label for="baseUrl">接口地址（Base URL）</label><input id="baseUrl" name="baseUrl" type="url" placeholder="https://example.com/v1" maxlength="2048" spellcheck="false" aria-describedby="endpoint-note"><p class="hint" id="endpoint-note">填写服务商提供的基础接口地址（支持 HTTP 与 HTTPS，通常以 /v1 结尾）。不要把密钥放进地址。</p>
+<label for="protocol">接口协议</label><select id="protocol" name="protocol"><option value="openai-compatible">OpenAI 兼容</option><option value="anthropic">Anthropic</option><option value="ollama">Ollama</option></select>
+<label for="baseUrl">接口地址（Base URL）</label><input id="baseUrl" name="baseUrl" type="url" placeholder="https://example.com/v1" maxlength="2048" spellcheck="false" aria-describedby="endpoint-note"><p class="hint" id="endpoint-note">填写服务商提供的基础接口地址（支持 HTTP 与 HTTPS）。Ollama 默认地址为 http://localhost:11434；不要把密钥放进地址。</p>
 <label for="model">模型名称</label><input id="model" name="model" type="text" maxlength="200" placeholder="填写服务商的模型 ID，例如 deepseek-chat" spellcheck="false">
 <div class="key-heading"><label for="apiKey">API 密钥</label><span id="key-state" class="hint">尚未读取</span></div>
 <input id="apiKey" name="apiKey" type="password" autocomplete="new-password" maxlength="8192" placeholder="留空保留已保存的密钥" aria-describedby="key-note">
@@ -48,7 +48,18 @@ export const settingsScript = `
   const save = get('save');
   const testBtn = get('test-btn');
   const testResult = get('test-result');
+  const protocol = get('protocol');
+  const baseUrl = get('baseUrl');
+  const apiKey = get('apiKey');
   function message(text, error = false) { status.textContent = text; status.dataset.error = String(error); }
+  function updateProtocolFields() {
+    const ollama = protocol.value === 'ollama';
+    apiKey.disabled = ollama || get('clearApiKey').checked;
+    get('key-note').textContent = ollama
+      ? 'Ollama 本机服务无需 API 密钥。'
+      : '密钥只写入本机配置，不会回显。留空不会删除旧密钥。';
+    baseUrl.placeholder = ollama ? 'http://localhost:11434' : 'https://example.com/v1';
+  }
   async function request(method, body) {
     const response = await fetch('/standalone-ai/settings', {
       method, credentials: 'omit', cache: 'no-store', redirect: 'error',
@@ -70,15 +81,18 @@ export const settingsScript = `
     get('key-state').textContent = data.hasKey ? '已保存 · 不回显' : '尚未设置';
     get('apiKey').value = '';
     get('clearApiKey').checked = false;
+    updateProtocolFields();
   }
   get('clearApiKey').addEventListener('change', () => {
-    get('apiKey').disabled = get('clearApiKey').checked;
+    get('apiKey').disabled = get('clearApiKey').checked || protocol.value === 'ollama';
     if (get('clearApiKey').checked) {
       get('apiKey').value = '';
       get('enabled').checked = false;
       get('automaticWhispers').checked = false;
     }
   });
+  protocol.addEventListener('change', updateProtocolFields);
+  updateProtocolFields();
   if (testBtn && testResult) {
     testBtn.addEventListener('click', async () => {
       testBtn.disabled = true;
@@ -137,7 +151,7 @@ export const settingsScript = `
     get('apiKey').value = '';
     try {
       populate(await request('POST', input));
-      get('apiKey').disabled = false;
+      updateProtocolFields();
       message('已保存到本机。');
     } catch (error) { message(error.message, true); }
     finally { save.disabled = false; }

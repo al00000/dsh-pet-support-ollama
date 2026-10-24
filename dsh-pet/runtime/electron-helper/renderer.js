@@ -122,6 +122,9 @@ async function boot() {
 function injectAssets() {
   const style = document.createElement('style');
   style.textContent =
+    '@font-face{font-family:"JetBrainsMono";src:url("' +
+    BASE +
+    '/font/JetBrainsMono-Regular.ttf") format("truetype");font-display:swap;font-weight:400}' +
     '@font-face{font-family:"ShangshouSoftCandy";src:url("' +
     BASE +
     '/font/' +

@@ -17,7 +17,7 @@ export type ChatSendState =
   | { ok: true }
   | { ok: false; reason: 'provider-missing' | 'generate-error' | 'config-error' | 'bad-request'; message?: string };
 
-const SEND_TIMEOUT_MS = 60_000; // 对话要等 LLM 生成回复，比碎碎念（30s）放宽一倍
+const SEND_TIMEOUT_MS = 360_000; // 覆盖本机大模型的加载与首字生成时间
 
 /** 发送一句对话（携带记忆去 host 生成回复并写入记忆）。
  *  网络/解析失败显式抛错（调用方决定报错方式，绝不静默伪造）。 */
@@ -52,11 +52,11 @@ export const CHAT_CSS = [
   '.dsh-pet-chat{position:fixed;z-index:2147483001;width:160px;max-width:80vw;',
   'background:rgba(255,255,255,.98);border:1px solid rgba(0,0,0,.12);border-radius:10px;',
   'box-shadow:0 10px 32px rgba(0,0,0,.22);color:#2b2b2b;font-size:14px;line-height:1.5;',
-  // 字体与桌宠气泡同款（上首软糖体，两端均已注入 @font-face），风格一致不显正式。
+  // 字体与桌宠气泡同款（两端均注入随包字体，并由系统字体补齐中文）。
   // 字体族走全局配置变量 --dsh-pet-font-family：弹窗挂在 body 下、继承不到宠物根容器，
-  // 所以由两端注入在 documentElement（回退参数 = 改造前的原栈）。
+  // 所以由两端注入在 documentElement（回退参数为内置等宽字体与常见系统中文字体）。
   // 字号保持固定 14px：配置里的 font.size 只作用于气泡与悬浮提示，不改变本弹窗。
-  "font-family:var(--dsh-pet-font-family,'ShangshouSoftCandy','Yuanti SC','YouYuan','幼圆','Comic Sans MS','PingFang SC','Microsoft YaHei',sans-serif);",
+  "font-family:var(--dsh-pet-font-family,'JetBrainsMono','Microsoft YaHei UI','Microsoft YaHei','SimHei','DengXian','SimSun',sans-serif);",
   'user-select:none}',
   '.dsh-pet-chat *{box-sizing:border-box}',
   '.dsh-pet-chat-input{display:block;width:100%;border:none;outline:none;background:transparent;',

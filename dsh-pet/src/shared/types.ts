@@ -169,10 +169,10 @@ export interface PhysicsParams {
 }
 
 /** 字体种类预设 id（config.jsonc 的 font.family 白名单；清单与对应字体栈见 src/shared/fonts.ts） */
-export type FontFamilyId = 'candy' | 'yahei' | 'youyuan' | 'kaiti' | 'simsun' | 'comic' | 'system';
+export type FontFamilyId = 'jetbrains-mono' | 'candy' | 'yahei' | 'youyuan' | 'kaiti' | 'simsun' | 'comic' | 'system';
 
 /** config.jsonc 的 font 段：字体（全局一份，所有宠物共用）。
- *  默认值 = src/shared/fonts.ts 的 DEFAULT_FONT（candy / 21 / true），内置配置与代码两侧保持一致。
+ *  默认值 = src/shared/fonts.ts 的 DEFAULT_FONT（jetbrains-mono / 21 / true），内置配置与代码两侧保持一致。
  *  **整段替换**（与 physics 同）：写了就整段用自己的，缺的子键不会从内置默认补回来——
  *  所以手改配置时必须三个子键写全，否则整段非法 → 告警 + 取默认。 */
 export interface FontConfig {
